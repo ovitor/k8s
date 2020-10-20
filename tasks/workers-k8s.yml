@@ -1,0 +1,13 @@
+---
+# tasks file for k8s
+
+- name: copy join-command from local machine
+  copy:
+    src: /tmp/join-command.sh
+    dest: /tmp/join-command.sh
+
+- name: join k8s cluster
+  shell: "sh /tmp/join-command.sh >> nodes_joined.txt"
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: nodes_joined.txt

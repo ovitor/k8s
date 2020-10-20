@@ -1,0 +1,73 @@
+---
+# tasks file for k8s
+
+- name: init k8s cluster
+  shell: kubeadm init --pod-network-cidr={{ pod_network_cidr }} --apiserver-advertise-address={{ apiserver_advertise_address}} >> k8s_cluster_initialized.txt
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: k8s_cluster_init.txt
+  when: apiserver_cert_extra_sans is not defined
+
+- name: init k8s cluster
+  shell: kubeadm init --pod-network-cidr={{ pod_network_cidr }} --apiserver-advertise-address={{ apiserver_advertise_address }} --apiserver-cert-extra-sans={{ apiserver_cert_extra_sans }} >> k8s_cluster_initialized.txt
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: k8s_cluster_init.txt
+  when: apiserver_cert_extra_sans is defined
+
+- name: create .kube directory
+  file:
+    path: "{{ ansible_facts.user_dir + '/.kube' }}"
+    state: directory
+    mode: 0755
+
+- name: copy admin.conf to user's kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ ansible_facts.user_dir + '/.kube/config' }}"
+    remote_src: yes
+    owner: "{{ ansible_facts.user_id }}"
+
+- name: install pod's network
+  shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: pods_network_installed.txt
+
+- name: copy gitlab file configuration
+  copy:
+    src: ../files/gitlab-admin-service-account.yml
+    dest: /tmp/gitlab-admin-service-account.yml
+    owner: "{{ ansible_facts.user_id }}"
+
+- name: enable k8s cluster to work with gitlab
+  shell: kubectl apply -f /tmp/gitlab-admin-service-account.yml
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: rbac_gitlab_installed.txt
+
+- name: get join command
+  shell: kubeadm token create --print-join-command
+  register: join_command_raw
+
+- name: set join command variable to posterior use
+  set_fact:
+    join_command: "{{ join_command_raw.stdout_lines[0] }}"
+
+- name: save join command as a file in local machine
+  become: false
+  local_action: copy content="{{ join_command }}" dest="/tmp/join-command.sh"
+
+- name: ensure .kube directory exists
+  file:
+    path: "{{ '/home/' + ansible_ssh_user + '/.kube' }}"
+    state: directory
+    mode: 0755
+    owner: "{{ ansible_ssh_user }}"
+
+- name: copy configuration file to {{ ansible_ssh_user }}
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ '/home/' + ansible_ssh_user + '/.kube/config' }}"
+    remote_src: yes
+    owner: "{{ ansible_ssh_user }}"

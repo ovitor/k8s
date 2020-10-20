@@ -1,0 +1,13 @@
+---
+# tasks file for k8s
+
+- name: install k8s components
+  import_tasks: common-k8s.yml
+
+- name: exec controllers k8s components
+  import_tasks: controllers-k8s.yml
+  when: "'controllers' in group_names"
+
+- name: exec nodes k8s components
+  import_tasks: workers-k8s.yml
+  when: "'workers' in group_names"

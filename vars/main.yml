@@ -1,0 +1,6 @@
+---
+# vars file for k8s
+#
+
+apiserver_advertise_address: "0.0.0.0"
+apiserver_cert_extra_sans: False
