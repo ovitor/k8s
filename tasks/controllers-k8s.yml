@@ -1,12 +1,18 @@
 ---
 # tasks file for k8s
 
+- name: check if .kube directory exists
+  stat:
+    path: "{{ ansible_facts.user_dir + '.kube' }}"
+  register: kube_directory
+
 - name: init k8s cluster
   shell: kubeadm init --pod-network-cidr={{ pod_network_cidr }} --apiserver-advertise-address={{ apiserver_advertise_address}} >> k8s_cluster_initialized.txt
   args:
     chdir: "{{ ansible_facts.user_dir }}"
     creates: k8s_cluster_init.txt
   when: apiserver_cert_extra_sans is not defined
+  run_once: true
 
 - name: init k8s cluster
   shell: kubeadm init --pod-network-cidr={{ pod_network_cidr }} --apiserver-advertise-address={{ apiserver_advertise_address }} --apiserver-cert-extra-sans={{ apiserver_cert_extra_sans }} >> k8s_cluster_initialized.txt
@@ -14,6 +20,7 @@
     chdir: "{{ ansible_facts.user_dir }}"
     creates: k8s_cluster_init.txt
   when: apiserver_cert_extra_sans is defined
+  run_once: true
 
 - name: create .kube directory
   file:
