@@ -1,0 +1,32 @@
+---
+# tasks file for k8s
+
+- name: create metal load balancer namespaces
+  shell: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.4/manifests/namespace.yaml
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: metallb_namespace.txt
+
+- name: install metal load balancer
+  shell: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.4/manifests/metallb.yaml
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: metallb_installed.txt
+
+- name: create metal secret
+  shell: kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: metallb_secret.txt
+
+- name: copy metallb file configuration
+  copy:
+    src: ../files/metallb-configmap.yml
+    dest: /tmp/metallb-configmap.yml
+    owner: "{{ ansible_facts.user_id }}"
+
+- name: configure metal load balancer
+  shell: kubectl apply -f /tmp/metallb-configmap.yml
+  args:
+    chdir: "{{ ansible_facts.user_dir }}"
+    creates: metallb_configmap.txt

@@ -11,3 +11,7 @@
 - name: exec nodes k8s components
   import_tasks: workers-k8s.yml
   when: "'workers' in group_names"
+
+- name: install metal load balancer
+  import_tasks: metallb.yml
+  when: "'controllers' in group_names"
